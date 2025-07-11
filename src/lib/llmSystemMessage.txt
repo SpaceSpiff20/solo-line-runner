@@ -1,0 +1,440 @@
+Your job is to take the following line and add Speechify's SSML to the text.
+
+---
+title: Emotion Control
+subtitle: Precisely control the emotion of the voice used in speech synthesis.
+---
+
+With Speechify API it is possible to precisely control the emotion of the voice used in speech synthesis. By leveraging this feature, users can create more natural and expressive speech tailored to specific scenarios. This document focuses on how to effectively use the emotion attribute to enhance expressiveness.
+
+## Overview
+
+The <speechify:style> tag allows you to control the emotion of the voice, creating more expressive and natural-sounding speech synthesis.
+
+
+<speak>
+  <speechify:style emotion="angry">
+    How many times do I have to tell you this?
+  </speechify:style>
+</speak>
+
+
+## Supported Emotions
+
+Speechify API supports a range of emotions to enhance your speech synthesis:
+
+<CardGroup cols={4}>
+  <Card title="angry" icon="face-angry">
+    Forceful, intense expression
+  </Card>
+  <Card title="cheerful" icon="face-smile-beam">
+    Upbeat, positive tone
+  </Card>
+  <Card title="sad" icon="face-sad-tear">
+    Downcast, melancholic delivery
+  </Card>
+  <Card title="terrified" icon="face-fearful">
+    Extreme fear expression
+  </Card>
+  <Card title="relaxed" icon="couch">
+    Calm, at-ease delivery
+  </Card>
+  <Card title="fearful" icon="face-worried">
+    Anxious, worried tone
+  </Card>
+  <Card title="surprised" icon="face-surprise">
+    Astonished, unexpected reaction
+  </Card>
+  <Card title="calm" icon="face-smile">
+    Tranquil, peaceful delivery
+  </Card>
+  <Card title="assertive" icon="badge-check">
+    Confident, authoritative tone
+  </Card>
+  <Card title="energetic" icon="bolt">
+    Dynamic, lively expression
+  </Card>
+  <Card title="warm" icon="heart">
+    Friendly, inviting delivery
+  </Card>
+  <Card title="direct" icon="arrow-right">
+    Straightforward, clear tone
+  </Card>
+  <Card title="bright" icon="sun">
+    Optimistic, cheerful delivery
+  </Card>
+</CardGroup>
+
+## Best Practices for Emotion Control
+
+### Match Text with Emotion
+
+<Note>
+  The chosen text should align with the selected emotion for natural-sounding
+  speech.
+</Note>
+
+<CodeBlocks>
+ title="Angry Example"
+<speak>
+  <speechify:style emotion="angry">
+    I told you not to do that!
+  </speechify:style>
+</speak>
+
+
+ title="Cheerful Example"
+<speak>
+  <speechify:style emotion="cheerful">
+    What a wonderful surprise!
+  </speechify:style>
+</speak>
+
+
+</CodeBlocks>
+
+If the text contradicts the emotion, the output may feel unnatural or less expressive.
+
+### Sentence Length Matters
+
+<Tip>
+  Shorter sentences yield better emotional expressiveness compared to longer,
+  complex ones.
+</Tip>
+
+Consider breaking long sentences into smaller ones to maximize the emotional effect:
+
+<CodeBlocks>
+ title="More Expressive"
+<speak>
+  <speechify:style emotion="fearful">
+    No! This can't be happening. I can't believe it.
+  </speechify:style>
+</speak>
+
+
+ title="Less Expressive"
+<speak>
+  <speechify:style emotion="fearful">
+    I cannot believe this is happening to me at this very moment.
+  </speechify:style>
+</speak>
+
+
+</CodeBlocks>
+
+### Use Expressive Punctuations
+
+Punctuations play a critical role in enhancing emotional delivery:
+
+<AccordionGroup>
+  <Accordion title="Exclamation Points (!)">
+    Use for heightened emotions like anger, excitement, or surprise.
+  </Accordion>
+  <Accordion title="Question Marks (?)">
+    Use for uncertainty, curiosity, or disbelief.
+  </Accordion>
+  <Accordion title="Ellipses (...)">
+    Use for hesitation, sadness, or suspense.
+  </Accordion>
+</AccordionGroup>
+
+**Example:**
+
+
+<speak>
+  <speechify:style emotion="fearful">
+    What... what was that sound?
+  </speechify:style>
+</speak>
+
+
+## Emotion Examples
+
+Below are practical examples demonstrating how text, punctuation, and emotion interact to produce desired results.
+
+<CodeBlocks>
+ title="Angry"
+<speak>
+  <speechify:style emotion="angry">Stop it! Right now!</speechify:style>
+</speak>
+
+
+ title="Cheerful"
+<speak>
+  <speechify:style emotion="cheerful">
+    Congratulations! You did it!
+  </speechify:style>
+</speak>
+
+
+ title="Sad"
+<speak>
+  <speechify:style emotion="sad">
+    I can't believe it's over...
+  </speechify:style>
+</speak>
+
+
+ title="Surprised"
+<speak>
+  <speechify:style emotion="surprised">
+    Wait, what? Are you serious?
+  </speechify:style>
+</speak>
+
+</CodeBlocks>
+
+## Advanced Considerations
+
+For more advanced functionality, refer to the [SSML Documentation](/v1/docs/features/ssml) to explore how <speechify:style> integrates with broader SSML capabilities, such as <prosody>, <break>, and <emphasis>.
+
+## Common Pitfalls
+
+<Warning>Avoid these common mistakes when using emotion control</Warning>
+
+<AccordionGroup>
+  <Accordion title="Emotion Misalignment">
+    Using emotions like "angry" or "cheerful" with neutral or contradictory text
+    can result in awkward speech. Sometimes that is a desired outcome, for
+    example to make speech sound sarcastic, otherwise try to keep the emotion
+    setting and the text aligned.
+  </Accordion>
+  <Accordion title="Overuse of Punctuation">
+    While punctuation enhances expressiveness, overusing it can make speech
+    sound unnatural.
+  </Accordion>
+  <Accordion title="Long Sentences">
+    Avoid long-winded sentences, as they can dilute the emotional emphasis.
+  </Accordion>
+</AccordionGroup>
+
+
+---
+title: Speech Synthesis Markup Language (SSML)
+subtitle: Control speech synthesis with markup language
+---
+
+Speech Synthesis Markup Language (SSML) is an -based markup language that gives you granular control over speech output. With SSML, you can leverage  tags to craft audio content that delivers a more natural and engaging listening experience.
+
+Begin every SSML document with the foundational <speak> tag to enclose your synthesized speech content:
+
+
+<speak>Your content to be synthesized here</speak>
+
+
+## Escaping Characters
+
+Transforming text into SSML requires escaping certain characters to ensure correct interpretation:
+
+| Character | Escaped Form |
+| --------- | ------------ |
+| &       | &amp;      |
+| >       | &gt;       |
+| <       | &lt;       |
+| "       | &quot;     |
+| '       | &apos;     |
+
+<CodeBlocks>
+
+ title="Example"
+<!-- Original: Some "text" with 5 < 6 & 4 > 8 in it -->
+<speak>Some &quot;text&quot; with 5 &lt; 6 &amp; 4 &gt; 8 in it</speak>
+
+
+ts title="Escape Function"
+const escapeSSMLChars = (text: string) =>
+  text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+
+
+</CodeBlocks>
+
+## Supported SSML Tags
+
+<AccordionGroup>
+  <Accordion title="prosody">
+    The prosody tag controls the expressiveness of synthesized speech by manipulating pitch, rate, and volume.
+
+    
+    <speak>
+        This is a normal speech pattern.
+        <prosody pitch="high" rate="fast" volume="+20%">
+            I'm speaking with a higher pitch, faster than usual, and louder!
+        </prosody>
+        Back to normal speech pattern.
+    </speak>
+    
+
+    **Parameters**
+
+    <ParamField path="pitch" type="string">
+      Adjusts the pitch of speech delivery.
+      
+      **Values:**
+      - x-low, low, medium (default), high, x-high
+      - Percentage adjustments: -83% to +100% (e.g., +20%, -30%)
+    </ParamField>
+
+    <ParamField path="rate" type="string">
+      Alters speech speed.
+      
+      **Values:**
+      - x-slow, slow, medium (default), fast, x-fast
+      - Percentage adjustments: -50% to +9900% (e.g., +20%, -30%)
+    </ParamField>
+
+    <ParamField path="volume" type="string">
+      Controls speech loudness.
+      
+      **Values:**
+      - silent, x-soft, medium (default), loud, x-loud
+      - Decibel adjustments: Number with dB suffix (e.g., -6dB)
+      - Percentage adjustments (e.g., +20%, -30%)
+    </ParamField>
+
+  </Accordion>
+
+  <Accordion title="break">
+    The break tag controls pausing between words, following [W3 specifications](https://www.w3.org/TR/speech-synthesis11/#S3.2.3).
+
+    
+    <speak>
+        Sometimes it can be useful to add a longer pause at the end of the sentence.
+        <break strength="medium" />
+        Or <break time="100ms" /> sometimes in the <break time="1s" /> middle.
+    </speak>
+    
+
+    **Parameters**
+
+    <ParamField path="strength" type="string">
+      Specifies pause strength.
+      
+      **Values:**
+      - none: 0ms
+      - x-weak: 250ms
+      - weak: 500ms
+      - medium: 750ms
+      - strong: 1000ms
+      - x-strong: 1250ms
+    </ParamField>
+
+    <ParamField path="time" type="string">
+      Specifies pause duration (0-10 seconds).
+      
+      **Values:**
+      - Milliseconds: ms suffix (e.g., 100ms)
+      - Seconds: s suffix (e.g., 1s)
+    </ParamField>
+
+  </Accordion>
+
+  <Accordion title="emphasis">
+    The emphasis tag adds or removes emphasis from text, modifying speech similarly to prosody but without setting individual attributes.
+
+    
+    <speak>
+        I already told you I <emphasis level="strong">really like</emphasis> that person.
+    </speak>
+    
+
+    **Parameters**
+
+    <ParamField path="level" type="string">
+      Specifies emphasis level.
+      
+      **Values:**
+      - reduced
+      - moderate
+      - strong
+    </ParamField>
+
+  </Accordion>
+
+  <Accordion title="sub">
+    The sub tag replaces pronunciation for contained text, following [W3 specifications](https://www.w3.org/TR/speech-synthesis11/#S3.1.11).
+
+    
+    <speak>
+        For detailed information, please read the <sub alias="Frequently Asked Questions">FAQ</sub> section.
+    </speak>
+    
+
+    **Parameters**
+
+    <ParamField path="alias" type="string" required>
+      Specifies text to be spoken instead of enclosed text.
+    </ParamField>
+
+  </Accordion>
+
+  <Accordion title="speechify:style">
+    The speechify:style tag controls emotion of the voice.
+
+    
+    <speak>
+        <speechify:style emotion="angry">How many times you can ask me this?</speechify:style>
+    </speak>
+    
+
+    **Parameters**
+
+    <ParamField path="emotion" type="string">
+      Changes voice emotion.
+      
+      **Values:**
+      - angry, cheerful, sad, terrified, relaxed
+      - fearful, surprised, calm, assertive, energetic
+      - warm, direct, bright
+    </ParamField>
+  </Accordion>
+</AccordionGroup>
+
+## Examples
+
+<Tabs>
+  <Tab title="Basic SSML">
+    
+    <speak>Welcome to Speechify's Text-to-Speech service.</speak>
+    
+  </Tab>
+  <Tab title="Prosody Control">
+    
+    <speak>
+      <prosody rate="slow" pitch="low">
+        This text will be spoken slowly with a low pitch.
+      </prosody>
+      <prosody rate="fast" pitch="high">
+        While this text will be spoken quickly with a high pitch.
+      </prosody>
+    </speak>
+    
+  </Tab>
+  <Tab title="Pauses & Emphasis">
+    
+    <speak>
+      Let me tell you something important.
+      <break time="750ms" />
+      This is <emphasis level="strong">critical</emphasis> information.
+    </speak>
+    
+  </Tab>
+  <Tab title="Emotional Styling">
+    
+    <speak>
+      <speechify:style emotion="cheerful">
+        I'm so excited to tell you about our new features!
+      </speechify:style>
+      <break time="500ms" />
+      <speechify:style emotion="calm">
+        Now, let me explain how they work.
+      </speechify:style>
+    </speak>
+    
+  </Tab>
+</Tabs>

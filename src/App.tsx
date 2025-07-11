@@ -5,11 +5,19 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import './App.css'
+import { generateText } from 'ai'
+import { openai, createOpenAI } from '@ai-sdk/openai'
 
 interface Dialogue {
   speaker: string
   text: string
 }
+
+// Available voice IDs for character assignment
+const AVAILABLE_VOICES = [
+  "oliver", "scott", "declan", "beverly", "jennifer", "alejandro", "russel", "lisa", 
+  "emily", "erin", "victoria"
+]
 
 function App() {
   const [apiKey, setApiKey] = useState('')
@@ -22,6 +30,17 @@ function App() {
   const [isPracticing, setIsPracticing] = useState(false)
   const [fileName, setFileName] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [openAIApiKey, setOpenAIApiKey] = useState('')
+  const [systemMessage, setSystemMessage] = useState('')
+  const [characterVoices, setCharacterVoices] = useState<Record<string, string>>({})
+
+  // Load system message from file
+  useEffect(() => {
+    fetch('/src/lib/llmSystemMessage.txt')
+      .then(res => res.text())
+      .then(setSystemMessage)
+      .catch(err => console.error('Failed to load system message', err))
+  }, [])
 
   // Initialize Speechify client when API key changes
   useEffect(() => {
@@ -29,6 +48,17 @@ function App() {
       setClient(new SpeechifyClient({ token: apiKey }))
     }
   }, [apiKey])
+
+  // Assign unique voices to characters when speakers change
+  useEffect(() => {
+    if (speakers.length > 0) {
+      const voiceAssignments: Record<string, string> = {}
+      speakers.forEach((speaker, index) => {
+        voiceAssignments[speaker] = AVAILABLE_VOICES[index % AVAILABLE_VOICES.length]
+      })
+      setCharacterVoices(voiceAssignments)
+    }
+  }, [speakers])
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -75,15 +105,32 @@ function App() {
   }
 
   const speakCue = async (cue: Dialogue) => {
-    if (!client) return
+    if (!client || !openAIApiKey) return
+
+    let enhancedText = cue.text
+    try {
+      // Enhance cue.text with SSML using OpenAI
+      const { text } = await generateText({
+        model: createOpenAI({ apiKey: openAIApiKey, compatibility: 'strict' })('gpt-4.1-nano'),
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: cue.text }
+        ]
+      })
+      enhancedText = text
+      console.log(enhancedText)
+    } catch (err) {
+      console.error('OpenAI enhancement failed, using original text:', err)
+    }
 
     try {
+      // Use the assigned voice for this character
+      const voiceId = characterVoices[cue.speaker] || "oliver" // fallback to oliver if no assignment
       const { audioData } = await client.tts.audio.speech({
-        input: cue.text,
-        voiceId: 'russell',
+        input: enhancedText,
+        voiceId: voiceId,
         audioFormat: 'wav'
       })
-      
       const audio = new Audio(`data:audio/wav;base64,${audioData}`)
       await audio.play()
     } catch (error) {
@@ -115,30 +162,67 @@ function App() {
   const currentCue = cues[currentCueIndex]
   const isEndOfScene = isPracticing && currentCueIndex >= cues.length - 1
 
+  const exitPractice = () => {
+    setIsPracticing(false)
+    setCurrentCueIndex(0)
+    setCues([])
+  }
+
   return (
     <div className={`app-container ${isPracticing ? 'practice-active' : ''}`}>
       <div className="controls-panel">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>The Solo Line Runner</CardTitle>
-            <CardDescription>Powered by Speechify API</CardDescription>
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              The Solo Line Runner
+            </CardTitle>
+            <CardDescription className="text-lg text-gray-600 mt-2">
+              Powered by Speechify API
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="api-key" className="text-sm font-medium">
+              <label htmlFor="openai-api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                OpenAI API Key
+              </label>
+              <Input
+                id="openai-api-key"
+                type="password"
+                placeholder="Enter your OpenAI API key"
+                value={openAIApiKey}
+                onChange={(e) => setOpenAIApiKey(e.target.value)}
+                disabled={isPracticing}
+                className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
                 Speechify API Key
               </label>
               <Input
                 id="api-key"
                 type="password"
-                placeholder="Enter your API key"
+                placeholder="Enter your Speechify API key"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 disabled={isPracticing}
+                className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               />
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Script File
+              </label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -150,18 +234,29 @@ function App() {
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
-                className="w-full"
+                className="w-full h-12 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
                 disabled={isPracticing || !apiKey}
               >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
                 Upload Script
               </Button>
               {fileName && (
-                <p className="text-sm text-muted-foreground">{fileName}</p>
+                <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {fileName}
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="character" className="text-sm font-medium">
+              <label htmlFor="character" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
                 I will read as:
               </label>
               <Select
@@ -169,24 +264,54 @@ function App() {
                 onValueChange={setSelectedCharacter}
                 disabled={speakers.length === 0 || isPracticing}
               >
-                <SelectTrigger id="character">
+                <SelectTrigger id="character" className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
                   <SelectValue placeholder="Select your character" />
                 </SelectTrigger>
                 <SelectContent>
                   {speakers.map(speaker => (
                     <SelectItem key={speaker} value={speaker}>
-                      {speaker}
+                      <div className="flex items-center justify-between w-full">
+                        <span>{speaker}</span>
+                        <span className="text-xs text-gray-500 ml-2">
+                          Voice: {characterVoices[speaker] || 'oliver'}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Voice Assignments Display */}
+            {speakers.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Voice Assignments
+                </label>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  {speakers.map(speaker => (
+                    <div key={speaker} className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700">{speaker}</span>
+                      <span className="text-blue-600 font-mono text-xs bg-blue-100 px-2 py-1 rounded">
+                        {characterVoices[speaker] || 'oliver'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <Button
               onClick={startPractice}
-              className="w-full"
-              disabled={!selectedCharacter || !apiKey || isPracticing}
+              className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              disabled={!selectedCharacter || !apiKey || !openAIApiKey || isPracticing}
             >
+              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Start Practice
             </Button>
           </CardContent>
@@ -194,20 +319,80 @@ function App() {
       </div>
 
       {isPracticing && (
-        <div className="cue-panel">
-          <Card className="w-full max-w-2xl">
-            <CardContent className="pt-6">
-              <p className="text-2xl mb-4">
-                {isEndOfScene ? 'End of scene.' : currentCue ? `${currentCue.speaker}: ${currentCue.text}` : ''}
-              </p>
-              {!isEndOfScene && (
-                <p className="text-sm text-muted-foreground">
-                  Press <kbd className="px-2 py-1 text-xs font-semibold bg-muted rounded">Space</kbd> for next cue
-                </p>
-              )}
+        <>
+          {/* Exit Button */}
+          <button
+            onClick={exitPractice}
+            className="fixed top-6 right-6 z-30 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-white"
+          >
+            <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <div className="cue-panel">
+            <Card className="w-full max-w-4xl">
+              <CardContent className="pt-8 pb-8 px-8">
+                <div className="text-center">
+                  <div className="mb-6">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                      Cue {currentCueIndex + 1} of {cues.length}
+                    </div>
+                  </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-8">
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${((currentCueIndex + 1) / cues.length) * 100}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {Math.round(((currentCueIndex + 1) / cues.length) * 100)}% complete
+                  </p>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-6xl text-blue-200 opacity-30">"</div>
+                  <p className="text-3xl font-medium text-gray-800 leading-relaxed mb-6 relative z-10">
+                    {isEndOfScene ? (
+                      <span className="text-green-600">🎉 End of scene! Great job!</span>
+                    ) : currentCue ? (
+                      <>
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-blue-600 font-semibold">{currentCue.speaker}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            Voice: {characterVoices[currentCue.speaker] || 'oliver'}
+                          </span>
+                        </div>
+                        <span>{currentCue.text}</span>
+                      </>
+                    ) : (
+                      ''
+                    )}
+                  </p>
+                  <div className="absolute -bottom-8 right-1/2 transform translate-x-1/2 text-6xl text-blue-200 opacity-30">"</div>
+                </div>
+                
+                {!isEndOfScene && (
+                  <div className="mt-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Press <kbd className="px-3 py-1 text-sm font-semibold bg-white border border-gray-300 rounded-md shadow-sm">Space</kbd> for next cue
+                    </p>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
+        </>
       )}
     </div>
   )
