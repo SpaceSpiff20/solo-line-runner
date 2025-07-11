@@ -6,7 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import './App.css'
 import { generateText } from 'ai'
-import { openai, createOpenAI } from '@ai-sdk/openai'
+import { createOpenAI } from '@ai-sdk/openai'
+import { VoiceCloneForm } from '@/components/VoiceCloneForm'
 
 interface Dialogue {
   speaker: string
@@ -15,8 +16,8 @@ interface Dialogue {
 
 // Available voice IDs for character assignment
 const AVAILABLE_VOICES = [
-  "oliver", "scott", "declan", "beverly", "jennifer", "alejandro", "russel", "lisa", 
-  "emily", "erin", "victoria"
+  "scott", "declan", "benjamin", "jennifer", "alejandro", "russel", "claudette", 
+  "dylan", "emily", "christina"
 ]
 
 function App() {
@@ -33,6 +34,11 @@ function App() {
   const [openAIApiKey, setOpenAIApiKey] = useState('')
   const [systemMessage, setSystemMessage] = useState('')
   const [characterVoices, setCharacterVoices] = useState<Record<string, string>>({})
+  const [showVoiceCloneForm, setShowVoiceCloneForm] = useState(false)
+  const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null)
+  const [useClonedVoice, setUseClonedVoice] = useState(false)
+  const [showVoiceAssignments, setShowVoiceAssignments] = useState(false)
+  const [showVoiceCloneStatus, setShowVoiceCloneStatus] = useState(false)
 
   // Load system message from file
   useEffect(() => {
@@ -124,8 +130,14 @@ function App() {
     }
 
     try {
-      // Use the assigned voice for this character
-      const voiceId = characterVoices[cue.speaker] || "oliver" // fallback to oliver if no assignment
+      // Use the assigned voice for this character, or cloned voice if enabled and available
+      let voiceId = characterVoices[cue.speaker] || "oliver" // fallback to oliver if no assignment
+      
+      // If user wants to use their cloned voice and it's available, use it for their character
+      if (useClonedVoice && clonedVoiceId && cue.speaker === selectedCharacter) {
+        voiceId = clonedVoiceId
+      }
+      
       const { audioData } = await client.tts.audio.speech({
         input: enhancedText,
         voiceId: voiceId,
@@ -168,154 +180,322 @@ function App() {
     setCues([])
   }
 
+  const handleVoiceCreated = (voiceId: string) => {
+    setClonedVoiceId(voiceId)
+    setShowVoiceCloneForm(false)
+  }
+
+  const handleCloseVoiceCloneForm = () => {
+    setShowVoiceCloneForm(false)
+  }
+
   return (
     <div className={`app-container ${isPracticing ? 'practice-active' : ''}`}>
-      <div className="controls-panel">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              The Solo Line Runner
-            </CardTitle>
-            <CardDescription className="text-lg text-gray-600 mt-2">
-              Powered by Speechify API
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <label htmlFor="openai-api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                OpenAI API Key
-              </label>
-              <Input
-                id="openai-api-key"
-                type="password"
-                placeholder="Enter your OpenAI API key"
-                value={openAIApiKey}
-                onChange={(e) => setOpenAIApiKey(e.target.value)}
-                disabled={isPracticing}
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                Speechify API Key
-              </label>
-              <Input
-                id="api-key"
-                type="password"
-                placeholder="Enter your Speechify API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                disabled={isPracticing}
-                className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Script File
-              </label>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".txt"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={isPracticing}
-              />
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                variant="outline"
-                className="w-full h-12 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-                disabled={isPracticing || !apiKey}
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Upload Script
-              </Button>
-              {fileName && (
-                <p className="text-sm text-green-600 font-medium flex items-center gap-1">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  {fileName}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="character" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                I will read as:
-              </label>
-              <Select
-                value={selectedCharacter}
-                onValueChange={setSelectedCharacter}
-                disabled={speakers.length === 0 || isPracticing}
-              >
-                <SelectTrigger id="character" className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
-                  <SelectValue placeholder="Select your character" />
-                </SelectTrigger>
-                <SelectContent>
-                  {speakers.map(speaker => (
-                    <SelectItem key={speaker} value={speaker}>
-                      <div className="flex items-center justify-between w-full">
-                        <span>{speaker}</span>
-                        <span className="text-xs text-gray-500 ml-2">
-                          Voice: {characterVoices[speaker] || 'oliver'}
-                        </span>
+      <div className={`main-panels ${showVoiceAssignments ? 'showing-voice-assignments' : ''} ${showVoiceCloneStatus ? 'showing-voice-clone-status' : ''}`}>
+        {/* Voice Clone Status Panel */}
+        {showVoiceCloneStatus && clonedVoiceId && (
+          <div className="voice-clone-status-panel">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Voice Clone Status
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 mt-1">
+                  Your Cloned Voice Details
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="card-content space-y-4">
+                <div className="space-y-4">
+                  {/* Success Status */}
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                      <div>
+                        <span className="text-sm font-medium text-purple-800">Voice Cloned Successfully</span>
+                        <p className="text-xs text-purple-600">Your voice has been cloned and is ready to use</p>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Voice Assignments Display */}
-            {speakers.length > 0 && (
+                  {/* Voice ID */}
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Voice ID:</span>
+                      <span className="text-purple-600 font-mono text-sm bg-purple-100 px-3 py-1 rounded-full border border-purple-200">
+                        {clonedVoiceId.slice(0, 8)}...
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Toggle Switch */}
+                  <div className="p-4 bg-white rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-medium text-purple-700">Read my lines for me</label>
+                      <button
+                        onClick={() => setUseClonedVoice(!useClonedVoice)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                          useClonedVoice ? 'bg-purple-600' : 'bg-gray-200'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            useClonedVoice ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    
+                    {useClonedVoice && (
+                      <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-xs text-purple-700">
+                          Your cloned voice will be used for your character's lines
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-purple-800">Voice Clone Info</span>
+                  </div>
+                  <p className="text-xs text-purple-700 leading-relaxed">
+                    Your cloned voice is stored securely and can be used to read your character's lines during practice sessions. 
+                    Toggle the switch above to enable or disable this feature.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <div className="controls-panel">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                The Solo Line Runner
+              </CardTitle>
+              <CardDescription className="text-lg text-gray-600 mt-2">
+                Powered by Speechify API
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <label htmlFor="openai-api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  OpenAI API Key
+                </label>
+                <Input
+                  id="openai-api-key"
+                  type="password"
+                  placeholder="Enter your OpenAI API key"
+                  value={openAIApiKey}
+                  onChange={(e) => setOpenAIApiKey(e.target.value)}
+                  disabled={isPracticing}
+                  className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Speechify API Key
+                </label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Enter your Speechify API key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  disabled={isPracticing}
+                  className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  Voice Assignments
+                  Script File
                 </label>
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={isPracticing}
+                />
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  variant="outline"
+                  className="w-full h-12 border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                  disabled={isPracticing || !apiKey}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Upload Script
+                </Button>
+                {fileName && (
+                  <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {fileName}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="character" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  I will read as:
+                </label>
+                <Select
+                  value={selectedCharacter}
+                  onValueChange={setSelectedCharacter}
+                  disabled={speakers.length === 0 || isPracticing}
+                >
+                  <SelectTrigger id="character" className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+                    <SelectValue placeholder="Select your character" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {speakers.map(speaker => (
+                      <SelectItem key={speaker} value={speaker}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{speaker}</span>
+                          <span className="text-xs text-gray-500 ml-2">
+                            Voice: {characterVoices[speaker] || 'oliver'}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Voice Assignments Toggle Button */}
+              {speakers.length > 0 && (
+                <Button
+                  onClick={() => setShowVoiceAssignments(!showVoiceAssignments)}
+                  variant="outline"
+                  className="w-full h-12 border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all duration-200"
+                  disabled={isPracticing}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  {showVoiceAssignments ? 'Hide' : 'Show'} Voice Assignments
+                </Button>
+              )}
+
+               {/* Clone Voice Button */}
+               <Button
+                onClick={() => setShowVoiceCloneForm(true)}
+                variant="outline"
+                className="w-full h-12 border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
+                disabled={!apiKey || isPracticing}
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                Clone Own Voice
+              </Button>
+
+              {/* Voice Clone Status Toggle Button */}
+              {clonedVoiceId && (
+                <Button
+                  onClick={() => setShowVoiceCloneStatus(!showVoiceCloneStatus)}
+                  variant="outline"
+                  className="w-full h-12 border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
+                  disabled={isPracticing}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {showVoiceCloneStatus ? 'Hide' : 'Show'} Voice Clone Status
+                </Button>
+              )}
+
+              <Button
+                onClick={startPractice}
+                className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                disabled={!selectedCharacter || !apiKey || !openAIApiKey || isPracticing}
+              >
+                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Start Practice
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Voice Assignments Panel */}
+        {showVoiceAssignments && speakers.length > 0 && (
+          <div className="voice-assignments-panel">
+            <Card className="w-full max-w-md">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  Voice Assignments
+                </CardTitle>
+                <CardDescription className="text-sm text-gray-600 mt-1">
+                  Character to Voice Mapping
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="card-content space-y-4">
+                <div className="space-y-3">
                   {speakers.map(speaker => (
-                    <div key={speaker} className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-gray-700">{speaker}</span>
-                      <span className="text-blue-600 font-mono text-xs bg-blue-100 px-2 py-1 rounded">
-                        {characterVoices[speaker] || 'oliver'}
-                      </span>
+                    <div key={speaker} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-all duration-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                          {speaker.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="font-semibold text-gray-800">{speaker}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Voice:</span>
+                        <span className="text-blue-600 font-mono text-sm bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
+                          {characterVoices[speaker] || 'oliver'}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            <Button
-              onClick={startPractice}
-              className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-              disabled={!selectedCharacter || !apiKey || !openAIApiKey || isPracticing}
-            >
-              <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Start Practice
-            </Button>
-          </CardContent>
-        </Card>
+                
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-blue-800">Voice Assignment Info</span>
+                  </div>
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    Each character is automatically assigned a unique voice from our available voice library. 
+                    You can clone your own voice to use for your selected character.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {isPracticing && (
@@ -393,6 +573,15 @@ function App() {
           </Card>
         </div>
         </>
+      )}
+
+      {/* Voice Clone Form Modal */}
+      {showVoiceCloneForm && (
+        <VoiceCloneForm
+          apiKey={apiKey}
+          onClose={handleCloseVoiceCloneForm}
+          onVoiceCreated={handleVoiceCreated}
+        />
       )}
     </div>
   )
