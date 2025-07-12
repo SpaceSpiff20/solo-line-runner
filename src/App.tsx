@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import './App.css'
 import { generateText } from 'ai'
-import { createOpenAI } from '@ai-sdk/openai'
+import { openai, createOpenAI } from '@ai-sdk/openai'
 import { VoiceCloneForm } from '@/components/VoiceCloneForm'
 
 interface Dialogue {
@@ -39,6 +39,7 @@ function App() {
   const [useClonedVoice, setUseClonedVoice] = useState(false)
   const [showVoiceAssignments, setShowVoiceAssignments] = useState(false)
   const [showVoiceCloneStatus, setShowVoiceCloneStatus] = useState(false)
+  const [useLLMWrapper, setUseLLMWrapper] = useState(true)
 
   // Load system message from file
   useEffect(() => {
@@ -111,22 +112,30 @@ function App() {
   }
 
   const speakCue = async (cue: Dialogue) => {
-    if (!client || !openAIApiKey) return
+    if (!client) return
 
     let enhancedText = cue.text
-    try {
-      // Enhance cue.text with SSML using OpenAI
-      const { text } = await generateText({
-        model: createOpenAI({ apiKey: openAIApiKey, compatibility: 'strict' })('gpt-4.1-nano'),
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: cue.text }
-        ]
-      })
-      enhancedText = text
-      console.log(enhancedText)
-    } catch (err) {
-      console.error('OpenAI enhancement failed, using original text:', err)
+    
+    // Only use LLM wrapper if enabled and OpenAI API key is provided
+    if (useLLMWrapper && openAIApiKey) {
+      try {
+        // Enhance cue.text with SSML using OpenAI
+        const { text } = await generateText({
+          model: createOpenAI({ apiKey: openAIApiKey, compatibility: 'strict' })('gpt-4.1-nano'),
+          messages: [
+            { role: 'system', content: systemMessage },
+            { role: 'user', content: cue.text }
+          ]
+        })
+        enhancedText = text
+        console.log('Enhanced text:', enhancedText)
+      } catch (err) {
+        console.error('OpenAI enhancement failed, using original text:', err)
+      }
+    } else if (useLLMWrapper && !openAIApiKey) {
+      console.warn('LLM wrapper enabled but no OpenAI API key provided, using original text')
+    } else {
+      console.log('Using original text (LLM wrapper disabled)')
     }
 
     try {
@@ -290,23 +299,53 @@ function App() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
+                          <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <label htmlFor="openai-api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   OpenAI API Key
                 </label>
-                <Input
-                  id="openai-api-key"
-                  type="password"
-                  placeholder="Enter your OpenAI API key"
-                  value={openAIApiKey}
-                  onChange={(e) => setOpenAIApiKey(e.target.value)}
-                  disabled={isPracticing}
-                  className="h-12 border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">LLM Enhancement</span>
+                  <button
+                    onClick={() => setUseLLMWrapper(!useLLMWrapper)}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      useLLMWrapper ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                    disabled={isPracticing}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                        useLLMWrapper ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
+              <Input
+                id="openai-api-key"
+                type="password"
+                placeholder={useLLMWrapper ? "Enter your OpenAI API key" : "LLM enhancement disabled"}
+                value={openAIApiKey}
+                onChange={(e) => setOpenAIApiKey(e.target.value)}
+                disabled={isPracticing || !useLLMWrapper}
+                className={`h-12 border-2 transition-all duration-200 ${
+                  useLLMWrapper 
+                    ? 'border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200' 
+                    : 'border-gray-100 bg-gray-50 text-gray-400'
+                }`}
+              />
+              {!useLLMWrapper && (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Using original text without AI enhancement
+                </p>
+              )}
+            </div>
               <div className="space-y-2">
                 <label htmlFor="api-key" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -437,7 +476,7 @@ function App() {
               <Button
                 onClick={startPractice}
                 className="w-full h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                disabled={!selectedCharacter || !apiKey || !openAIApiKey || isPracticing}
+                disabled={!selectedCharacter || !apiKey || (useLLMWrapper && !openAIApiKey) || isPracticing}
               >
                 <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
