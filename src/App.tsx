@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import './App.css'
 import { generateText } from 'ai'
-import { openai, createOpenAI } from '@ai-sdk/openai'
+import { createOpenAI } from '@ai-sdk/openai'
 import { VoiceCloneForm } from '@/components/VoiceCloneForm'
 
 interface Dialogue {
