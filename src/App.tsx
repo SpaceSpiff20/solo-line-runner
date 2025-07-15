@@ -468,7 +468,6 @@ function App() {
       <Card
         className="w-full max-w-3xl p-8 shadow-2xl border border-border bg-card relative"
         onClick={handleCardClick}
-        onTouchEnd={handleCardClick}
         style={{ touchAction: 'manipulation' }}
       >
         {/* Exit Button */}
