@@ -48,6 +48,7 @@ So, buckle up, and let the fun begin!`
       }
 
       mediaRecorder.start()
+      console.log("recording started")
       setIsRecording(true)
       setError('')
     } catch (err) {
@@ -69,6 +70,7 @@ So, buckle up, and let the fun begin!`
       setError('')
     }
   }
+  console.log("audioFile:")
   console.log(audioFile)
 
   const createVoice = async () => {
@@ -119,13 +121,13 @@ So, buckle up, and let the fun begin!`
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-border bg-card shadow-2xl">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">
+          <CardTitle className="text-2xl font-bold text-center mb-2 text-foreground">
             Clone Your Voice
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-center mb-4 text-muted-foreground">
             Create a custom voice model using your own voice
           </CardDescription>
         </CardHeader>
@@ -133,7 +135,7 @@ So, buckle up, and let the fun begin!`
           {/* Personal Information */}
           <div className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="fullName" className="block text-sm font-medium mb-2 text-foreground">
                 Full Name *
               </label>
               <Input
@@ -143,11 +145,11 @@ So, buckle up, and let the fun begin!`
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 disabled={isProcessing}
+                className="bg-background text-foreground"
               />
             </div>
-            
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium mb-2 text-foreground">
                 Email Address *
               </label>
               <Input
@@ -157,6 +159,7 @@ So, buckle up, and let the fun begin!`
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isProcessing}
+                className="bg-background text-foreground"
               />
             </div>
           </div>
@@ -164,19 +167,18 @@ So, buckle up, and let the fun begin!`
           {/* Audio Recording Section */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              <h3 className="text-lg font-semibold mb-2 text-foreground">
                 Record Your Voice Sample
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Please read the following text clearly and naturally:
               </p>
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <p className="text-sm text-gray-700 leading-relaxed">
+              <div className="bg-muted p-4 rounded-lg border border-border">
+                <p className="text-sm text-foreground leading-relaxed">
                   {targetText}
                 </p>
               </div>
             </div>
-
             <div className="flex gap-4">
               <Button
                 onClick={isRecording ? stopRecording : startRecording}
@@ -200,7 +202,6 @@ So, buckle up, and let the fun begin!`
                   </>
                 )}
               </Button>
-
               <Button
                 onClick={() => fileInputRef.current?.click()}
                 variant="outline"
@@ -213,7 +214,6 @@ So, buckle up, and let the fun begin!`
                 Upload Audio
               </Button>
             </div>
-
             <input
               ref={fileInputRef}
               type="file"
@@ -221,10 +221,9 @@ So, buckle up, and let the fun begin!`
               onChange={handleFileUpload}
               className="hidden"
             />
-
             {audioFile && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-green-700 flex items-center gap-2">
+              <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
+                <p className="text-sm text-green-400 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -236,42 +235,23 @@ So, buckle up, and let the fun begin!`
 
           {/* Error and Success Messages */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="bg-destructive/20 border border-destructive rounded-lg p-3">
+              <p className="text-sm text-destructive-foreground">{error}</p>
             </div>
           )}
-
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-sm text-green-700">{success}</p>
+            <div className="bg-green-900/20 border border-green-700 rounded-lg p-3">
+              <p className="text-sm text-green-400">{success}</p>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-4 pt-4">
-            <Button
-              onClick={onClose}
-              variant="outline"
-              disabled={isProcessing}
-              className="flex-1"
-            >
+          <div className="flex gap-4 justify-end">
+            <Button onClick={onClose} variant="outline" disabled={isProcessing}>
               Cancel
             </Button>
-            <Button
-              onClick={createVoice}
-              disabled={!fullName || !email || !audioFile || isProcessing}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {isProcessing ? (
-                <>
-                  <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Creating Voice...
-                </>
-              ) : (
-                'Create Voice'
-              )}
+            <Button onClick={createVoice} disabled={isProcessing}>
+              {isProcessing ? 'Processing...' : 'Create Voice'}
             </Button>
           </div>
         </CardContent>
