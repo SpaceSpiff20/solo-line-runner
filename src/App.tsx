@@ -21,15 +21,15 @@ const AVAILABLE_VOICES_EN = [
   "dylan", "emily", "christina"
 ]
 
-const AVAILABLE_VOICES_ES = [
-  "alejandro", "Celia"
+const AVAILABLE_VOICES_ES_ES = [
+  "alejandro", "celia"
 ]
 
-const AVAILABLE_VOICES_FR = [
+const AVAILABLE_VOICES_FR_FR = [
   "raphael", "elise"
 ]
 
-const AVAILABLE_VOICES_DE = [
+const AVAILABLE_VOICES_DE_DE = [
   "frederick", "andra"
 ]
 
@@ -53,25 +53,25 @@ const LANGUAGE_CONFIG = {
     voices: AVAILABLE_VOICES_EN,
     scriptFile: "sampleScript-en.txt"
   },
-  "es": {
+  "es-ES": {
     code: "es-ES",
     name: "Español",
     model: "simba-multilingual",
-    voices: AVAILABLE_VOICES_ES,
+    voices: AVAILABLE_VOICES_ES_ES,
     scriptFile: "sampleScript-es-ES.txt"
   },
-  "fr": {
+  "fr-FR": {
     code: "fr-FR",
     name: "Français",
     model: "simba-multilingual",
-    voices: AVAILABLE_VOICES_FR,
+    voices: AVAILABLE_VOICES_FR_FR,
     scriptFile: "sampleScript-fr-FR.txt"
   },
-  "de": {
+  "de-DE": {
     code: "de-DE",
     name: "Deutsch",
     model: "simba-multilingual",
-    voices: AVAILABLE_VOICES_DE,
+    voices: AVAILABLE_VOICES_DE_DE,
     scriptFile: "sampleScript-de-DE.txt"
   },
   "pt-BR": {
@@ -378,8 +378,11 @@ function App() {
     const nextIndex = currentCueIndex + 1
     if (nextIndex < cues.length) {
       setCurrentCueIndex(nextIndex)
-      // Always update UI for the next cue
-      if (cues[nextIndex].speaker !== selectedCharacter && preloadedCues[nextIndex]) {
+      // Play audio for all cues if useClonedVoice is true, otherwise skip selected character's lines
+      if (
+        (useClonedVoice || cues[nextIndex].speaker !== selectedCharacter) &&
+        preloadedCues[nextIndex]
+      ) {
         playPreloadedCue(nextIndex, preloadedCues)
       } else {
         setCurrentSpeechMarks(null)
@@ -417,7 +420,10 @@ function App() {
     setIsLoadingCues(false)
     setIsPracticing(true)
     // Only play audio if the first cue is not the user's line
-    if (preloaded[0] && cuesToPractice[0].speaker !== selectedCharacter) {
+    if (
+      preloaded[0] &&
+      (useClonedVoice || cuesToPractice[0].speaker !== selectedCharacter)
+    ) {
       playPreloadedCue(0, preloaded)
     } else {
       setCurrentSpeechMarks(null)
