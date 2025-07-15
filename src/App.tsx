@@ -450,12 +450,30 @@ function App() {
     }
   }, [])
 
+  const exitButtonRef = useRef<HTMLButtonElement>(null)
+
+  const handleCardClick = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent advancing if click/tap is on or inside the exit button
+    if (exitButtonRef.current && exitButtonRef.current.contains(e.target as Node)) {
+      return
+    }
+    if (!isEndOfScene) {
+      nextCue()
+    }
+  }
+
   // Practice mode cue panel UI
   const renderPracticePanel = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95">
-      <Card className="w-full max-w-3xl p-8 shadow-2xl border border-border bg-card relative">
+      <Card
+        className="w-full max-w-3xl p-8 shadow-2xl border border-border bg-card relative"
+        onClick={handleCardClick}
+        onTouchEnd={handleCardClick}
+        style={{ touchAction: 'manipulation' }}
+      >
         {/* Exit Button */}
                 <Button
+          ref={exitButtonRef}
           onClick={exitPractice}
                   variant="outline"
           className="absolute top-4 right-4"
