@@ -17,7 +17,7 @@ interface Dialogue {
 
 // Available voice IDs for character assignment
 const AVAILABLE_VOICES_EN = [
-  "scott", "declan", "benjamin", "jennifer", "alejandro", "russel", "claudette", 
+  "scott", "oliver", "benjamin", "jennifer", "alejandro", "russel", "claudette", 
   "dylan", "emily", "christina"
 ]
 
@@ -121,7 +121,7 @@ function App() {
   const [useClonedVoice, setUseClonedVoice] = useState(false)
   const [showVoiceAssignments, setShowVoiceAssignments] = useState(false)
   const [showVoiceCloneStatus, setShowVoiceCloneStatus] = useState(false)
-  const [useLLMWrapper, setUseLLMWrapper] = useState(true)
+  const [useLLMWrapper, setUseLLMWrapper] = useState(false)
   const [currentSpeechMarks, setCurrentSpeechMarks] = useState<any[] | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1)
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null)
@@ -312,9 +312,9 @@ function App() {
     return results
   }
 
-  // Play a cue from preloadedCues, always stop previous audio
+  // Fix playPreloadedCue to use absolute cue index
   const playPreloadedCue = (cueIdx: number, preloads = preloadedCues) => {
-    const pre = preloads[cueIdx - currentCueIndex] || preloads[0]
+    const pre = preloads[cueIdx] // use absolute index
     if (!pre) return
     // Stop previous audio
     if (currentAudio) {
@@ -377,17 +377,21 @@ function App() {
     }
   }, [isPracticing, currentCueIndex, preloadedCues, cues])
 
-  // Debounced nextCue: only allow if audio is not playing (or is ended/paused)
+  // Update nextCue to always update UI, only play audio for non-user lines
   const nextCue = () => {
     if (isAudioPlaying && currentAudio && !currentAudio.paused && !currentAudio.ended) return
     const nextIndex = currentCueIndex + 1
     if (nextIndex < cues.length) {
       setCurrentCueIndex(nextIndex)
-      setPreloadedCues(prev => {
-        const newPreloads = prev.slice(1)
-        if (newPreloads[0]) playPreloadedCue(nextIndex, newPreloads)
-        return newPreloads
-      })
+      // Always update UI for the next cue
+      if (cues[nextIndex].speaker !== selectedCharacter && preloadedCues[nextIndex]) {
+        playPreloadedCue(nextIndex, preloadedCues)
+      } else {
+        setCurrentSpeechMarks(null)
+        setCurrentWordIndex(-1)
+        setCurrentAudio(null)
+        setIsAudioPlaying(false)
+      }
     }
   }
 
@@ -404,30 +408,27 @@ function App() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isPracticing, currentCueIndex, cues])
 
-  // Update startPractice to log all lines that will be read
+  // Update startPractice to preload all cues and use absolute indexing
   const startPractice = async () => {
     if (!selectedCharacter || !client) return
-    let cuesToPractice: Dialogue[]
-    if (useClonedVoice) {
-      cuesToPractice = dialogues // include all lines
-    } else {
-      cuesToPractice = dialogues.filter(d => d.speaker !== selectedCharacter)
-    }
-    // Log all lines that will be read
-    console.log('Cues to be read:')
-    cuesToPractice.forEach((cue, idx) => {
-      console.log(`${idx + 1}. ${cue.speaker}: ${cue.text}`)
-    })
+    // Always include all lines for cues
+    const cuesToPractice = dialogues
     setCues(cuesToPractice)
     setCurrentCueIndex(0)
     setIsLoadingCues(true)
-    const preloadCount = Math.min(5, cuesToPractice.length)
+    const preloadCount = cuesToPractice.length // preload all cues for absolute indexing
     const preloaded = await preloadCues(0, preloadCount, cuesToPractice)
     setPreloadedCues(preloaded)
     setIsLoadingCues(false)
     setIsPracticing(true)
-    if (preloaded[0]) {
+    // Only play audio if the first cue is not the user's line
+    if (preloaded[0] && cuesToPractice[0].speaker !== selectedCharacter) {
       playPreloadedCue(0, preloaded)
+    } else {
+      setCurrentSpeechMarks(null)
+      setCurrentWordIndex(-1)
+      setCurrentAudio(null)
+      setIsAudioPlaying(false)
     }
   }
 
@@ -646,6 +647,13 @@ function App() {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground flex items-center justify-center px-2 relative">
+      {/* Loading Overlay */}
+      {isLoadingCues && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-6"></div>
+          <div className="text-xl font-semibold text-white">Loading Lines...</div>
+        </div>
+      )}
       {/* Speechify logo at top left */}
       <div style={{ position: 'absolute', top: 24, left: 24, zIndex: 50 }}>
         <svg width="240" height="64" viewBox="0 0 384 96" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'inline-block', verticalAlign: 'middle', filter: 'brightness(0)' }}>
