@@ -44,11 +44,6 @@ const AVAILABLE_VOICES_PT_PT = [
 const AVAILABLE_VOICES_HI_IN = [
   "hemant", "priya"
 ]
-
-const selected_language_code = "en"
-
-const selected_model = "simba-base"
-
 // Language configuration
 const LANGUAGE_CONFIG = {
   "en": {
@@ -119,8 +114,8 @@ function App() {
   const [showVoiceCloneForm, setShowVoiceCloneForm] = useState(false)
   const [clonedVoiceId, setClonedVoiceId] = useState<string | null>(null)
   const [useClonedVoice, setUseClonedVoice] = useState(false)
-  const [showVoiceAssignments, setShowVoiceAssignments] = useState(false)
-  const [showVoiceCloneStatus, setShowVoiceCloneStatus] = useState(false)
+  const [] = useState(false)
+  const [] = useState(false)
   const [useLLMWrapper, setUseLLMWrapper] = useState(false)
   const [currentSpeechMarks, setCurrentSpeechMarks] = useState<any[] | null>(null)
   const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1)
@@ -129,9 +124,9 @@ function App() {
   // Add new state for loading and preloaded cues
   const [isLoadingCues, setIsLoadingCues] = useState(false)
   const [preloadedCues, setPreloadedCues] = useState<any[]>([])
-  const [sampleScript, setSampleScript] = useState('')
+  const [, setSampleScript] = useState('')
   const [scriptText, setScriptText] = useState('')
-  const [showScriptBanner, setShowScriptBanner] = useState(false)
+  const [, setShowScriptBanner] = useState(false)
   const [selectedLanguage, setSelectedLanguage] = useState('en')
   const [currentLanguageCode, setCurrentLanguageCode] = useState('en')
   const [currentModel, setCurrentModel] = useState('simba-base')
@@ -443,10 +438,6 @@ function App() {
 
   const handleVoiceCreated = (voiceId: string) => {
     setClonedVoiceId(voiceId)
-    setShowVoiceCloneForm(false)
-  }
-
-  const handleCloseVoiceCloneForm = () => {
     setShowVoiceCloneForm(false)
   }
 
