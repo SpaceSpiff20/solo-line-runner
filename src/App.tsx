@@ -157,7 +157,7 @@ function App() {
 
   // Load system message from file
   useEffect(() => {
-    fetch('/src/lib/llmSystemMessage.txt')
+    fetch('/llmSystemMessage.txt')
       .then(res => res.text())
       .then(setSystemMessage)
       .catch(err => console.error('Failed to load system message', err))
@@ -167,7 +167,7 @@ function App() {
   useEffect(() => {
     const languageConfig = LANGUAGE_CONFIG[selectedLanguage as keyof typeof LANGUAGE_CONFIG]
     if (languageConfig) {
-      fetch(`/src/lib/${languageConfig.scriptFile}`)
+      fetch(`/${languageConfig.scriptFile}`)
         .then(res => res.text())
         .then(text => {
           setSampleScript(text)
