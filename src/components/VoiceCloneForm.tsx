@@ -40,10 +40,16 @@ So, buckle up, and let the fun begin!`
         audioChunksRef.current.push(event.data)
       }
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/mpeg' })
-        const audioFile = new File([audioBlob], 'voice-sample.mp3', { type: 'audio/mpeg' })
-        setAudioFile(audioFile)
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        // Convert to WAV
+        try {
+          const wavBlob = await convertToWavBlob(audioBlob)
+          const wavFile = new File([wavBlob], 'voice-sample.wav', { type: 'audio/wav' })
+          setAudioFile(wavFile)
+        } catch (err) {
+          setError('Failed to process audio. Please try again.')
+        }
         stream.getTracks().forEach(track => track.stop())
       }
 
@@ -258,4 +264,62 @@ So, buckle up, and let the fun begin!`
       </Card>
     </div>
   )
+} 
+
+// Utility: Convert audio Blob to WAV Blob using Web Audio API
+async function convertToWavBlob(blob: Blob): Promise<Blob> {
+  // Decode audio data
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+  // Encode as WAV
+  const wavBuffer = encodeWAV(audioBuffer);
+  return new Blob([wavBuffer], { type: 'audio/wav' });
+}
+
+// Minimal WAV encoder for PCM 16-bit
+function encodeWAV(audioBuffer: AudioBuffer): ArrayBuffer {
+  const numChannels = audioBuffer.numberOfChannels;
+  const sampleRate = audioBuffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+  const samples = audioBuffer.length;
+  const blockAlign = numChannels * bitDepth / 8;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples * blockAlign;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  // Write WAV header
+  function writeString(view: DataView, offset: number, str: string) {
+    for (let i = 0; i < str.length; i++) {
+      view.setUint8(offset + i, str.charCodeAt(i));
+    }
+  }
+  let offset = 0;
+  writeString(view, offset, 'RIFF'); offset += 4;
+  view.setUint32(offset, 36 + dataSize, true); offset += 4;
+  writeString(view, offset, 'WAVE'); offset += 4;
+  writeString(view, offset, 'fmt '); offset += 4;
+  view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size
+  view.setUint16(offset, format, true); offset += 2; // AudioFormat
+  view.setUint16(offset, numChannels, true); offset += 2;
+  view.setUint32(offset, sampleRate, true); offset += 4;
+  view.setUint32(offset, byteRate, true); offset += 4;
+  view.setUint16(offset, blockAlign, true); offset += 2;
+  view.setUint16(offset, bitDepth, true); offset += 2;
+  writeString(view, offset, 'data'); offset += 4;
+  view.setUint32(offset, dataSize, true); offset += 4;
+
+  // Write PCM samples
+  for (let ch = 0; ch < numChannels; ch++) {
+    const channel = audioBuffer.getChannelData(ch);
+    let sampleOffset = 44 + ch * 2;
+    for (let i = 0; i < samples; i++) {
+      const s = Math.max(-1, Math.min(1, channel[i]));
+      view.setInt16(sampleOffset + i * blockAlign, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+  }
+  return buffer;
 } 
